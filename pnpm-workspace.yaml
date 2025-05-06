@@ -1,0 +1,4 @@
+# DOCORE: pnpm workspace 설정
+packages:
+  - 'apps/*'
+  - 'packages/*'
