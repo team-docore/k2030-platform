@@ -113,11 +113,11 @@ export const authOptions: NextAuthOptions = {
     },
   },
   events: {
-    async signIn(message) { console.log('🔍 [NextAuth] signIn event:', message); },
-    async signOut(message) { console.log('🔍 [NextAuth] signOut event:', message); },
-    async createUser(message) { console.log('🔍 [NextAuth] createUser event:', message); },
-    async updateUser(message) { console.log('🔍 [NextAuth] updateUser event:', message); },
-    async linkAccount(message) { console.log('🔍 [NextAuth] linkAccount event:', message); },
-    async session(message) { console.log('🔍 [NextAuth] session event:', message); },
+    async signIn(message: { user: any; account: any; profile?: any; isNewUser?: boolean }) { console.log('🔍 [NextAuth] signIn event:', message); },
+    async signOut(message: { session: any; token: any }) { console.log('🔍 [NextAuth] signOut event:', message); },
+    async createUser(message: { user: any }) { console.log('🔍 [NextAuth] createUser event:', message); },
+    async updateUser(message: { user: any }) { console.log('🔍 [NextAuth] updateUser event:', message); },
+    async linkAccount(message: { user: any; account: any; profile?: any }) { console.log('🔍 [NextAuth] linkAccount event:', message); },
+    async session(message: { session: any; token: any }) { console.log('🔍 [NextAuth] session event:', message); },
   },
 }; 

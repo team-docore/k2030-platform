@@ -1,7 +1,7 @@
 import { Poll } from '@/types/poll';
 
-const now = new Date();
-const endsAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+const now = new Date().toISOString();
+const endsAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
 export let polls: Poll[] = [
   {

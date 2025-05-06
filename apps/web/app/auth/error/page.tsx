@@ -4,9 +4,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Card from '@/components/design/Card';
 import { Title } from '@/components/design/Typography';
 import { PrimaryButton } from '@/components/design/Button';
-import React from 'react';
+import React, { Suspense } from 'react';
 
-export default function AuthErrorPage() {
+function ErrorContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const errorMsg = decodeURIComponent(searchParams?.get('error') || '');
@@ -29,5 +29,13 @@ export default function AuthErrorPage() {
         <PrimaryButton style={{ width: '100%', fontSize: 16 }} onClick={() => router.push('/')}>메인으로 이동</PrimaryButton>
       </Card>
     </div>
+  );
+}
+
+export default function AuthErrorPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ErrorContent />
+    </Suspense>
   );
 } 

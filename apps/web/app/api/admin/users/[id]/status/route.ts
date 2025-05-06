@@ -1,8 +1,11 @@
 // DOCORE: 어드민 회원 상태/권한 변경 API
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  context: { params: { id: string } }
+) {
   const { status, is_admin } = await req.json();
   if (!status && typeof is_admin === 'undefined') return NextResponse.json({ error: 'status 또는 is_admin 값이 필요합니다.' }, { status: 400 });
 
@@ -13,7 +16,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const { data, error } = await supabase
     .from('users')
     .update(updateFields)
-    .eq('id', params.id)
+    .eq('id', context.params.id)
     .select('id, email, name, is_admin, status, created_at, updated_at')
     .single();
 

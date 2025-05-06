@@ -260,7 +260,7 @@ export function PollCard({ poll, onVote, onUpdate, onDelete, hasVoted: hasVotedP
                   <DotDivider>·</DotDivider>
                   <DateText>{formatDate(poll.createdAt)}</DateText>
                 </FlexRowGap8>
-                <RelativeBox onClick={(e) => e.stopPropagation()}>
+                <RelativeBox onClick={(e: React.MouseEvent) => e.stopPropagation()}>
                   <MenuButton onClick={handleMenuClick} aria-label="메뉴 열기">
                     <FaEllipsisV size={18} />
                   </MenuButton>
@@ -317,9 +317,9 @@ export function PollCard({ poll, onVote, onUpdate, onDelete, hasVoted: hasVotedP
               <BottomBar>
                 <GrayText>총 {poll.totalVotes}명 참여</GrayText>
                 <FlexRowGap12>
-                  <FaRegCommentDots style={{ color: '#a3a3a3' }} size={18} />
+                  <FaRegCommentDots color="#a3a3a3" size={18} />
                   <GrayTextA3>3</GrayTextA3>
-                  <FaShareAlt style={{ color: '#a3a3a3' }} size={18} />
+                  <FaShareAlt color="#a3a3a3" size={18} />
                 </FlexRowGap12>
               </BottomBar>
               {error && <ErrorText>{error}</ErrorText>}

@@ -1,5 +1,5 @@
 // DOCORE: 어드민/유저 투표 등록/수정 폼 컴포넌트 (복구)
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import { supabase } from '@/lib/supabaseClient';
 import { CategorySelector } from './CategorySelector';
@@ -17,18 +17,18 @@ interface PollCreateFormProps {
 
 export function PollCreateForm({ categories, onSubmit, initial }: PollCreateFormProps) {
   const [question, setQuestion] = useState(initial?.question || '');
-  const [categoryId, setCategoryId] = useState(initial?.categoryId || categories[0]?.id || 1);
+  const [categoryId, setCategoryId] = useState<number | null>(initial?.categoryId || categories[0]?.id || null);
   const [options, setOptions] = useState<string[]>(initial?.options || ['좋아요', '몰라요', '싫어요']);
 
   const handleOptionChange = (idx: number, value: string) => {
-    setOptions(opts => opts.map((o, i) => (i === idx ? value : o)));
+    setOptions((opts: string[]) => opts.map((o: string, i: number) => (i === idx ? value : o)));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!question.trim()) return alert('질문을 입력하세요');
     if (!categoryId) return alert('카테고리를 선택하세요');
-    if (options.some(o => !o.trim())) return alert('모든 옵션을 입력하세요');
+    if (options.some((o: string) => !o.trim())) return alert('모든 옵션을 입력하세요');
     onSubmit({ question, categoryId, options });
   };
 
@@ -47,7 +47,7 @@ export function PollCreateForm({ categories, onSubmit, initial }: PollCreateForm
       <div style={{ marginBottom: 16 }}>
         옵션<br />
         <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-          {options.map((opt, idx) => (
+          {options.map((opt: string, idx: number) => (
             <input key={idx} value={opt} onChange={e => handleOptionChange(idx, e.target.value)} style={{ flex: 1, padding: '0.7rem', borderRadius: 8, border: '1px solid #e5e7eb' }} />
           ))}
         </div>

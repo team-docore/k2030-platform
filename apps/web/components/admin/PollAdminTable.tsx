@@ -191,10 +191,10 @@ export default function PollAdminTable() {
                   <td style={{ padding: '10px 8px', fontWeight: 600 }}>{poll.totalVotes ?? 0}</td>
                   <td style={{ padding: '10px 8px' }}><DateText>{formatDate(poll.createdAt)}</DateText></td>
                   <td style={{ padding: '10px 8px' }}>
-                    <PrimaryButton style={{ padding: '0.3rem 1.2rem', fontSize: 14 }} onClick={e => { e.stopPropagation(); handleShowEdit(poll); }}>수정</PrimaryButton>
+                    <PrimaryButton style={{ padding: '0.3rem 1.2rem', fontSize: 14 }} onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleShowEdit(poll); }}>수정</PrimaryButton>
                   </td>
                   <td style={{ padding: '10px 8px' }}>
-                    <PrimaryButton style={{ padding: '0.3rem 1.2rem', fontSize: 14, background: '#e5e7eb', color: '#222' }} onClick={e => { e.stopPropagation(); handleDelete(poll.id); }}>삭제</PrimaryButton>
+                    <PrimaryButton style={{ padding: '0.3rem 1.2rem', fontSize: 14, background: '#e5e7eb', color: '#222' }} onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleDelete(poll.id); }}>삭제</PrimaryButton>
                   </td>
                 </tr>,
                 expandedPollId === poll.id && expandedPoll && (

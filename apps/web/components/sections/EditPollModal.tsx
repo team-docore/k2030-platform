@@ -142,7 +142,7 @@ export function EditPollModal({ poll, onClose, onSave }: EditPollModalProps) {
 
   return (
     <ModalOverlay onClick={onClose}>
-      <ModalContent onClick={e => e.stopPropagation()}>
+      <ModalContent onClick={(e: React.MouseEvent) => e.stopPropagation()}>
         <Title>투표 수정</Title>
         <CategorySelector
           value={categoryId}
@@ -152,7 +152,7 @@ export function EditPollModal({ poll, onClose, onSave }: EditPollModalProps) {
         <Input
           type="text"
           value={question}
-          onChange={e => setQuestion(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuestion(e.target.value)}
           placeholder="질문을 입력하세요"
           disabled={loading}
         />
