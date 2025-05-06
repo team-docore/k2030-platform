@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Poll, PollOption } from '@/types/poll';
+import { Poll } from '@/types/poll';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { PollCard } from './PollCard';
 import { MoreButton } from './MoreButton';
@@ -53,9 +53,9 @@ export function ThinkingSection({ loading }: ThinkingSectionProps) {
     }
   };
 
-  const handleVote = async (poll: Poll, optionId: string) => {
+  const handleVote = async (pollId: string, optionId: string) => {
     try {
-      const response = await fetch(`/api/polls/${poll.id}/vote`, {
+      const response = await fetch(`/api/polls/${pollId}/vote`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -64,7 +64,8 @@ export function ThinkingSection({ loading }: ThinkingSectionProps) {
       });
       if (!response.ok) throw new Error('투표 실패');
       const updatedPoll = await response.json();
-      setPolls(polls.map(p => p.id === poll.id ? updatedPoll : p));
+      setPolls(polls.map(p => p.id === pollId ? updatedPoll : p));
+      setVotedPolls(prev => ({ ...prev, [pollId]: true }));
     } catch (err) {
       alert(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.');
     }
@@ -161,35 +162,18 @@ export function ThinkingSection({ loading }: ThinkingSectionProps) {
             )}
           </UserBar>
         </AppBar>
-        <Card marginBottom="1.2rem">
+        <Card $marginBottom="1.2rem">
           <AdBox>광고 배너 영역</AdBox>
           <SubTitle>2030 세대의 생각을 투표로 확인하세요</SubTitle>
         </Card>
         {showCreate && null}
-        <Card marginBottom="1.2rem">
-          {polls.slice(0, visibleCount).map((poll, idx) => {
-            const isExpanded = expandedPollId === null ? idx === 0 : expandedPollId === poll.id;
-            const isOwner = session?.user?.email === poll.userEmail;
-            return (
-              <div key={poll.id} style={{ marginBottom: '1.2rem' }}>
-                <PollCard
-                  poll={poll}
-                  isExpanded={isExpanded}
-                  onExpand={() => {
-                    if (isExpanded) return;
-                    setExpandedPollId(poll.id);
-                  }}
-                  onVote={(optionId) => handleVote(poll, optionId)}
-                  onUpdate={isOwner ? handleUpdatePoll : undefined}
-                  onDelete={isOwner ? handleDeletePoll : undefined}
-                  hasVoted={votedPolls[poll.id]}
-                  disabled={votedPolls[poll.id]}
-                />
-              </div>
-            );
-          })}
-        </Card>
-        {visibleCount < polls.length && <MoreButton onClick={handleMore} />}
+        <PollCard 
+          polls={polls}
+          onVote={handleVote}
+          onUpdate={handleUpdatePoll}
+          onDelete={handleDeletePoll}
+          hasVoted={votedPolls}
+        />
       </ContentWrapper>
     </MainContainer>
   );

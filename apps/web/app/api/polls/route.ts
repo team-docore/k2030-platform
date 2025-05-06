@@ -43,10 +43,27 @@ export async function GET() {
   const userEmail = session?.user?.email;
 
   try {
-    const { data: polls, error } = await supabase
+    // 1. 관심없음 poll_id 목록 조회 (user_email 기준)
+    let ignorePollIds: string[] = [];
+    if (userEmail) {
+      const { data: ignores } = await supabase
+        .from('poll_ignores')
+        .select('poll_id')
+        .eq('user_email', userEmail);
+      ignorePollIds = (ignores ?? []).map(row => row.poll_id);
+    }
+
+    // 2. polls에서 관심없음 poll_id 제외
+    let query = supabase
       .from('polls')
       .select('*, categories(name)')
       .order('created_at', { ascending: false });
+
+    if (ignorePollIds.length > 0) {
+      query = query.not('id', 'in', `(${ignorePollIds.join(',')})`);
+    }
+
+    const { data: polls, error } = await query;
 
     if (error) {
       throw error;

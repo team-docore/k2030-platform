@@ -1,0 +1,86 @@
+// DOCORE: Prisma 스키마
+datasource db {
+  provider = "postgresql"
+  url      = env("SUPABASE_DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  pollId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+
+  @@index([pollId])
+  @@index([userId])
+}
+
+model Poll {
+  id          String    @id @default(cuid())
+  question    String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  endsAt      DateTime?
+  categories  Category? @relation(fields: [categoryId], references: [id])
+  categoryId  String?
+  options     Option[]
+  votes       Vote[]
+  comments    Comment[]
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+
+  @@index([categoryId])
+  @@index([userId])
+}
+
+model User {
+  id        String    @id @default(cuid())
+  name      String?
+  email     String?   @unique
+  image     String?
+  isAdmin   Boolean   @default(false)
+  polls     Poll[]
+  votes     Vote[]
+  comments  Comment[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Category {
+  id    String @id @default(cuid())
+  name  String @unique
+  polls Poll[]
+}
+
+model Option {
+  id     String @id @default(cuid())
+  text   String
+  votes  Vote[]
+  poll   Poll   @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  pollId String
+
+  @@index([pollId])
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  option    Option   @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  optionId  String
+  poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  pollId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+
+  @@unique([pollId, userId])
+  @@index([optionId])
+  @@index([pollId])
+  @@index([userId])
+} 

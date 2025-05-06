@@ -30,7 +30,7 @@ export default function PollAdminForm({ initial, categories, onSubmit, onCancel 
   };
 
   return (
-    <Card marginBottom="1.5rem">
+    <Card $marginBottom="1.5rem">
       <form onSubmit={handleSubmit}>
         <SubTitle style={{ marginBottom: 16 }}>{initial ? '질문 수정' : '질문 등록'}</SubTitle>
         <div style={{ marginBottom: 12 }}>

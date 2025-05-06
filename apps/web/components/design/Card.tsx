@@ -2,15 +2,15 @@
 import styled from 'styled-components';
 
 interface CardProps {
-  marginBottom?: string;
+  $marginBottom?: string;
 }
 
 const Card = styled.div<CardProps>`
   background: #fff;
   border-radius: 1.5rem;
   box-shadow: none;
-  padding: 2rem 1.5rem;
-  margin-bottom: ${({ marginBottom }) => marginBottom || '2rem'};
+  padding: 1.5rem 1.5rem;
+  margin-bottom: ${({ $marginBottom }) => $marginBottom || '1.5rem'};
   border: none;
 `;
 

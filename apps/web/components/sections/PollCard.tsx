@@ -1,347 +1,238 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Poll, PollOption } from '@/types/poll';
-import { FaRegCommentDots, FaShareAlt, FaEllipsisV } from 'react-icons/fa';
+// DOCORE: 투표 목록을 카드 형식으로 보여주는 컴포넌트
+import React, { useState, useEffect } from 'react';
+import { Poll } from '@/types/poll';
+import { Table } from '@/components/design/Table';
 import styled from 'styled-components';
-import { EditPollModal } from './EditPollModal';
-import { useSession } from 'next-auth/react';
-import { ClipLoader } from 'react-spinners';
+import { PollDetailCard } from './PollDetailCard';
+import { SubTitle, Category } from '@/components/design/Typography';
+import { ContentWrapper } from '@/components/design/Layout';
 import Card from '@/components/design/Card';
-import { OptionButton } from '@/components/design/Button';
-import { OptionPercent, Question, Category, DateText, InfoTag, TimeTag, GrayText, GrayTextA3, DotDivider, ErrorText } from '@/components/design/Typography';
-import { TopBar, OptionGroup, BottomBar, SpinnerContainer, FlexRowGap8, FlexRowGap12, RelativeBox } from '@/components/design/Layout';
-import { MenuButton, Menu, MenuItem } from '@/components/design/Layout';
-import { formatDate } from '@/utils/date';
+import axios from 'axios';
 
-interface PollCardProps {
-  poll: Poll;
-  onVote: (optionId: string) => void;
-  onUpdate?: (poll: Poll) => void;
-  onDelete?: (pollId: string) => void;
-  hasVoted?: boolean;
-  disabled?: boolean;
-  isExpanded?: boolean;
-  onExpand?: () => void;
-}
-
-function formatRemainingTime(endsAt: Date | string | undefined | null): string {
-  if (!endsAt) return '마감일 미설정';
-  
-  const endDate = typeof endsAt === 'string' ? new Date(endsAt) : endsAt;
-  if (isNaN(endDate.getTime())) return '마감일 미설정';
-  
-  const now = new Date();
-  const diff = endDate.getTime() - now.getTime();
-  
-  if (diff <= 0) return '마감';
-  
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-  
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-}
-
-interface OptionButtonProps {
-  $selected: boolean;
-  $index: number;
-  $disabled: boolean;
-}
-
-const optionType = (idx: number) =>
-  idx === 0 ? 'like' : idx === 1 ? 'neutral' : 'dislike';
-
-const OptionsContainer = styled.div`
+const Container = styled(ContentWrapper)`
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  margin-top: 1rem;
+  gap: 0 !important;
+  padding: 0 !important;
+`;
+const TableCell = styled.td`
+  font-size: 1.08rem;
+  font-weight: 500;
+  color: #222;
+  padding: 0.5rem 0.2rem;
+  vertical-align: middle;
+`;
+const VoteCountCell = styled.td`
+  font-size: 0.98rem;
+  color: #888;
+  text-align: right;
+  padding: 0.7rem 0.2rem;
+  min-width: 60px;
+`;
+const TableWrapper = styled.div`
+  margin: 0 -1.0rem !important;
+  padding: 0 !important;
+`;
+const TightSubTitle = styled(SubTitle)`
+  margin: 0 !important;
+  padding: 0.25rem !important;
+`;
+const WideCard = styled(Card)`
+  padding: 2rem 1.5rem 1.5rem 1.5rem !important;
+`;
+const StyledTable = styled(Table)`
+  width: 100% !important;
+`;
+const CategoryGap = styled(Category)`
+  margin-right: 0.5rem;
 `;
 
-const OptionText = styled.span`
-  flex: 1;
-`;
+interface PollCardProps {
+  polls: Poll[];
+  onVote?: (pollId: string, optionId: string) => void;
+  onUpdate?: (poll: Poll) => void;
+  onDelete?: (pollId: string) => void;
+  hasVoted?: { [pollId: string]: boolean };
+}
 
-const VoteCount = styled.span`
-  font-weight: 600;
-  margin-left: 0.5rem;
-`;
-
-const PollBottomBar = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 1rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid #e5e7eb;
-`;
-
-const ParticipantCount = styled.span`
-  color: #6b7280;
-  font-size: 0.9rem;
-`;
-
-const ClosedTag = styled.span`
-  color: #ef4444;
-  font-size: 0.9rem;
-  font-weight: 600;
-`;
-
-const RemainTime = styled.span`
-  color: #3b82f6;
-  font-size: 0.9rem;
-  font-weight: 600;
-`;
-
-const getOptionType = (text: string): 'like' | 'neutral' | 'dislike' => {
-  if (text.includes('좋아요')) return 'like';
-  if (text.includes('몰라요')) return 'neutral';
-  return 'dislike';
-};
-
-const CollapsedQuestion = styled(Question)`
-  margin: 0 auto;
-  font-size: 1rem;
-  line-height: 1.4;
-  color: #333;
-  text-align: center;
-  background: #f8f9fa;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  padding: 0.5rem 1rem;
-  display: inline-block;
-`;
-
-export function PollCard({ poll, onVote, onUpdate, onDelete, hasVoted: hasVotedProp, disabled, isExpanded = false, onExpand }: PollCardProps) {
-  const { data: session } = useSession();
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [hidden, setHidden] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const [remainingTime, setRemainingTime] = useState<string>(formatRemainingTime(poll.endsAt));
-  const menuRef = useRef<HTMLDivElement>(null);
-  const isOwner = session?.user?.email === poll.userEmail;
-  const hasVoted = hasVotedProp ?? poll.hasVoted ?? false;
+export function PollCard({ polls, onVote, onUpdate, onDelete, hasVoted = {} }: PollCardProps) {
+  const [selectedPoll, setSelectedPoll] = useState<Poll | null>(null);
+  const [activePolls, setActivePolls] = useState<Poll[]>([]);
+  const [endedPolls, setEndedPolls] = useState<Poll[]>([]);
+  const [hideDetail, setHideDetail] = useState(false);
+  const [ignorePollIds, setIgnorePollIds] = useState<string[]>([]);
 
   useEffect(() => {
-    console.log('PollCard props:', {
-      onUpdate: !!onUpdate,
-      onDelete: !!onDelete,
-      isOwner: isOwner,
-      hasVoted: hasVoted
-    });
-  }, [onUpdate, onDelete, isOwner, hasVoted]);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setRemainingTime(formatRemainingTime(poll.endsAt));
-    }, 1000);
-    
-    return () => clearInterval(timer);
-  }, [poll.endsAt]);
-
-  useEffect(() => {
-    console.log('옵션 votes:', poll.options, '총 투표수:', poll.totalVotes);
-  }, [poll]);
-
-  useEffect(() => {
-    console.log('PollCard 업데이트:', {
-      pollId: poll.id,
-      options: poll.options,
-      totalVotes: poll.totalVotes,
-      hasVoted: poll.hasVoted
-    });
-  }, [poll]);
-
-  const handleVote = async (optionId: string) => {
-    console.log('투표 요청:', {
-      pollId: poll.id,
-      optionId,
-      currentOptions: options,
-      selectedOption: options.find((opt: PollOption) => opt.id === optionId)
-    });
-    
-    if (hasVoted) return;
-    setLoading(true);
-    setError(null);
-    try {
-      await onVote(optionId);
-      setSelected(optionId);
-    } catch (err) {
-      setError('투표에 실패했습니다. 잠시 후 다시 시도해주세요.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleMenuClick = () => setMenuOpen(v => !v);
-
-  const handleCloseMenu = useCallback(() => setMenuOpen(false), []);
-
-  const handleEdit = () => {
-    handleCloseMenu();
-    setIsEditModalOpen(true);
-  };
-
-  const handleSavePoll = useCallback(async (updatedPoll: Poll) => {
-    console.log('수정 버튼 클릭됨', updatedPoll);
-    console.log('onUpdate 함수 존재 여부:', !!onUpdate);
-    if (onUpdate) {
+    // 사용자의 관심없음 목록 가져오기
+    const fetchIgnoredPolls = async () => {
       try {
-        console.log('onUpdate 함수 호출 전');
-        await onUpdate(updatedPoll);
-        console.log('onUpdate 함수 호출 후');
+        const response = await axios.get('/api/polls/ignore');
+        if (response.data.ignoredPollIds) {
+          setIgnorePollIds(response.data.ignoredPollIds);
+          console.log('관심없음 목록 로드:', response.data.ignoredPollIds);
+        }
       } catch (error) {
-        console.error('투표 수정 중 오류 발생:', error);
-        alert('투표 수정에 실패했습니다.');
+        console.error('관심없음 목록 조회 실패:', error);
       }
-    } else {
-      console.warn('onUpdate 함수가 없습니다.');
-    }
-  }, [onUpdate]);
+    };
+    fetchIgnoredPolls();
+  }, []);
 
-  const handleHide = () => {
-    setHidden(true);
-    handleCloseMenu();
+  // 관심없음 처리된 투표 제외
+  const filteredPolls = polls.filter(p => !ignorePollIds.includes(p.id));
+
+  useEffect(() => {
+    if (filteredPolls.length > 0 && !selectedPoll) {
+      const latestPoll = filteredPolls.reduce((latest, current) => {
+        const latestDate = new Date(latest.createdAt).getTime();
+        const currentDate = new Date(current.createdAt).getTime();
+        return currentDate > latestDate ? current : latest;
+      });
+      setSelectedPoll(latestPoll);
+    }
+  }, [filteredPolls, selectedPoll]);
+
+  useEffect(() => {
+    const now = new Date().getTime();
+    const active = filteredPolls.filter((poll: Poll) => {
+      if (!poll.endsAt) return true;
+      const endDate = new Date(poll.endsAt).getTime();
+      return endDate > now;
+    });
+    const ended = filteredPolls.filter((poll: Poll) => {
+      if (!poll.endsAt) return false;
+      const endDate = new Date(poll.endsAt).getTime();
+      return endDate <= now;
+    });
+    setActivePolls(active);
+    setEndedPolls(ended);
+  }, [filteredPolls]);
+
+  const handleRowClick = (poll: Poll) => {
+    setSelectedPoll(poll);
+    setHideDetail(false);
   };
 
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [poll.id, onDelete]);
+  // 관심없음 처리 시 DB에 기록 후 최신 투표로 전환
+  const handleHideDetail = async () => {
+    if (selectedPoll) {
+      try {
+        console.log('관심없음 처리 시작:', selectedPoll.id);
+        const response = await axios.post(`/api/polls/${selectedPoll.id}/ignore`);
+        console.log('관심없음 처리 결과:', response.data);
+        
+        if (response.data.ok) {
+          // 1. 현재 선택된 투표를 제외한 나머지 투표들
+          const remainingPolls = filteredPolls.filter(p => p.id !== selectedPoll.id);
+          
+          // 2. ignorePollIds 상태 업데이트
+          setIgnorePollIds(prev => [...prev, selectedPoll.id]);
+          
+          // 3. 상세 카드 닫기
+          setHideDetail(true);
+          setSelectedPoll(null);
 
-  useEffect(() => {
-    console.log('poll.createdAt:', poll.createdAt);
-  }, [poll.createdAt]);
+          // 4. activePolls, endedPolls 상태 업데이트
+          const now = new Date().getTime();
+          const active = remainingPolls.filter((poll: Poll) => {
+            if (!poll.endsAt) return true;
+            const endDate = new Date(poll.endsAt).getTime();
+            return endDate > now;
+          });
+          const ended = remainingPolls.filter((poll: Poll) => {
+            if (!poll.endsAt) return false;
+            const endDate = new Date(poll.endsAt).getTime();
+            return endDate <= now;
+          });
+          setActivePolls(active);
+          setEndedPolls(ended);
 
-  const options = Array.isArray(poll.options)
-    ? poll.options
-    : typeof poll.options === 'string'
-      ? JSON.parse(poll.options)
-      : [];
+          // 5. 남은 투표가 있으면 첫 번째 투표 선택
+          setTimeout(() => {
+            if (active.length > 0) {
+              setSelectedPoll(active[0]);
+              setHideDetail(false);
+            } else if (ended.length > 0) {
+              setSelectedPoll(ended[0]);
+              setHideDetail(false);
+            }
+          }, 100);
 
-  console.log('PollCard 렌더링:', {
-    pollId: poll.id,
-    options,
-    selected,
-    hasVoted
-  });
-
-  // DOCORE: 메뉴 바깥 클릭 시 자동 닫힘
-  useEffect(() => {
-    if (!menuOpen) return;
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuOpen(false);
+          console.log('관심없음 상태 업데이트 완료');
+        } else {
+          console.error('관심없음 처리 실패:', response.data.error);
+          alert('관심없음 처리에 실패했습니다.');
+        }
+      } catch (error) {
+        console.error('관심없음 API 호출 에러:', error);
+        alert('관심없음 처리 중 오류가 발생했습니다.');
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [menuOpen]);
-
-  if (hidden) return null;
+  };
 
   return (
-    <>
-      <RelativeBox>
-        <div onClick={onExpand} style={{ cursor: 'pointer' }}>
-          {!isExpanded ? (
-            <CollapsedQuestion>
-              {poll.categories?.name ? `[${poll.categories.name}] ` : ''}{poll.question}
-            </CollapsedQuestion>
-          ) : (
-            <>
-              <TopBar>
-                <FlexRowGap8>
-                  <Category>{poll.categories?.name || '카테고리 없음'}</Category>
-                  <DotDivider>·</DotDivider>
-                  <DateText>{formatDate(poll.createdAt)}</DateText>
-                </FlexRowGap8>
-                <RelativeBox onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                  <MenuButton onClick={handleMenuClick} aria-label="메뉴 열기">
-                    <FaEllipsisV size={18} />
-                  </MenuButton>
-                  {menuOpen && (
-                    <Menu id={`poll-menu-${poll.id}`} ref={menuRef}>
-                      {isOwner ? (
-                        <>
-                          <MenuItem onClick={handleEdit}>수정</MenuItem>
-                          <MenuItem onClick={() => {
-                            handleCloseMenu();
-                            onDelete!(poll.id);
-                          }}>삭제</MenuItem>
-                        </>
-                      ) : (
-                        <MenuItem onClick={handleHide}>관심없음</MenuItem>
-                      )}
-                    </Menu>
-                  )}
-                </RelativeBox>
-              </TopBar>
-              <Question>{poll.question}</Question>
-              <OptionGroup>
-                {poll.options.map((option, idx) => {
-                  const percentage = poll.totalVotes > 0 
-                    ? Math.round((option.votes / poll.totalVotes) * 100)
-                    : 0;
-                  
-                  return (
-                    <OptionButton
-                      key={option.id}
-                      onClick={() => handleVote(option.id)}
-                      disabled={hasVoted || loading}
-                      $selected={selected === option.id}
-                      $disabled={hasVoted || loading}
-                      $type={optionType(idx)}
-                    >
-                      {loading && selected === option.id ? (
-                        <SpinnerContainer>
-                          <ClipLoader size={16} color="#ffffff" />
-                          <span>투표 중...</span>
-                        </SpinnerContainer>
-                      ) : (
-                        <>
-                          {option.text}
-                          <OptionPercent>
-                            {percentage}%
-                          </OptionPercent>
-                        </>
-                      )}
-                    </OptionButton>
-                  );
-                })}
-              </OptionGroup>
-              <BottomBar>
-                <GrayText>총 {poll.totalVotes}명 참여</GrayText>
-                <FlexRowGap12>
-                  <FaRegCommentDots color="#a3a3a3" size={18} />
-                  <GrayTextA3>3</GrayTextA3>
-                  <FaShareAlt color="#a3a3a3" size={18} />
-                </FlexRowGap12>
-              </BottomBar>
-              {error && <ErrorText>{error}</ErrorText>}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-                <InfoTag>
-                  마감일: {formatDate(poll.endsAt)}
-                </InfoTag>
-                <TimeTag $closed={remainingTime === '마감'}>
-                  {remainingTime}
-                </TimeTag>
-              </div>
-            </>
-          )}
-        </div>
-      </RelativeBox>
-      {isEditModalOpen && (
-        <EditPollModal
-          poll={poll}
-          onClose={() => setIsEditModalOpen(false)}
-          onSave={handleSavePoll}
+    <Container>
+      {selectedPoll && !hideDetail && (
+        <PollDetailCard
+          poll={selectedPoll}
+          onVote={(optionId: string) => onVote?.(selectedPoll.id, optionId)}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          hasVoted={hasVoted[selectedPoll.id]}
+          onClose={() => setSelectedPoll(null)}
+          onHide={handleHideDetail}
         />
       )}
-    </>
+      {activePolls.length > 0 && (
+        <>
+          <TightSubTitle>진행중인 투표</TightSubTitle>
+          <WideCard $marginBottom="1rem">
+            <TableWrapper>
+              <StyledTable
+                headers={[]}
+                data={activePolls}
+                onRowClick={handleRowClick}
+                renderRow={(poll: Poll) => (
+                  <>
+                    <TableCell>
+                      {poll.categories?.name && <CategoryGap>[{poll.categories.name}]</CategoryGap>}
+                      {poll.question}
+                    </TableCell>
+                    <VoteCountCell>{poll.totalVotes}명</VoteCountCell>
+                  </>
+                )}
+                emptyMessage="진행중인 투표가 없습니다."
+              />
+            </TableWrapper>
+          </WideCard>
+        </>
+      )}
+      {endedPolls.length > 0 && (
+        <>
+          <TightSubTitle>마감된 투표</TightSubTitle>
+          <WideCard $marginBottom="1rem">
+            <TableWrapper>
+              <StyledTable
+                headers={[]}
+                data={endedPolls}
+                onRowClick={handleRowClick}
+                renderRow={(poll: Poll) => (
+                  <>
+                    <TableCell>
+                      {poll.categories?.name && <CategoryGap>[{poll.categories.name}]</CategoryGap>}
+                      {poll.question}
+                    </TableCell>
+                    <VoteCountCell>{poll.totalVotes}명</VoteCountCell>
+                  </>
+                )}
+                emptyMessage="마감된 투표가 없습니다."
+              />
+            </TableWrapper>
+          </WideCard>
+        </>
+      )}
+    </Container>
   );
-} 
+}
+
+export default PollCard; 

@@ -75,14 +75,11 @@ function mapPoll(pollFromApi: any): Poll {
           const parsedDate = new Date(pollFromApi.updated_at);
           if (!isNaN(parsedDate.getTime())) {
               updatedAtDate = parsedDate;
-          } else {
-               console.warn(`Invalid updated_at format: ${pollFromApi.updated_at} for poll ${pollFromApi.id}`);
           }
       } catch (e) { console.error("Error parsing updated_at:", pollFromApi.updated_at, e); }
   } else {
       // updated_at이 없거나 문자열이 아니면 createdAtDate 사용
       updatedAtDate = createdAtDate;
-      console.warn(`Missing or invalid updated_at for poll ${pollFromApi.id}, using createdAt time.`);
   }
 
   // options 변환 (ID 없으면 임의 생성 방지 - API에서 ID 보장 필요)

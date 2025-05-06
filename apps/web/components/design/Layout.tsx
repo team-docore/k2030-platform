@@ -75,10 +75,10 @@ export const BottomBar = styled.div`
 
 export const SpinnerContainer = styled.div`
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
   gap: 0.5rem;
+  justify-content: center;
 `;
 
 export const AdBox = styled.div`
@@ -176,8 +176,11 @@ export const FlexRowGap8 = styled(FlexRow)`
   gap: 8px;
 `;
 
-export const FlexRowGap12 = styled(FlexRow)`
-  gap: 12px;
+export const FlexRowGap12 = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
 `;
 
 export const RelativeBox = styled.div`
