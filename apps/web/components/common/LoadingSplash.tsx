@@ -34,7 +34,7 @@ const Dot = styled.div`
     40% { transform: scale(1); }
   }
 `;
-
+//gittest
 export default function LoadingSplash() {
   return (
     <LoadingContainer>
