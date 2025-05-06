@@ -1,7 +1,7 @@
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { JWT } from "next-auth/jwt";
-import { Session, Account } from "next-auth";
+import { Session, Account, User } from "next-auth";
 import { supabase } from './supabaseClient';
 
 export const authOptions: NextAuthOptions = {
