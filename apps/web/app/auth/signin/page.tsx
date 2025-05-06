@@ -128,14 +128,14 @@ export default function SignInPage() {
         <Input
           placeholder="이메일 주소"
           value={email}
-          onChange={e => setEmail(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
           autoComplete="username"
         />
         <Input
           placeholder="비밀번호"
           type="password"
           value={password}
-          onChange={e => setPassword(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
           autoComplete="current-password"
         />
         <LoginButton disabled>로그인</LoginButton>
