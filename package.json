@@ -7,8 +7,7 @@
     "build": "cd apps/web && VERCEL=true pnpm install --no-frozen-lockfile && pnpm build",
     "start": "cd apps/web && pnpm start",
     "lint": "turbo run lint",
-    "clean": "turbo run clean && rm -rf node_modules",
-    "postinstall": "pnpm install --force"
+    "clean": "turbo run clean && rm -rf node_modules"
   },
   "workspaces": [
     "apps/*",
