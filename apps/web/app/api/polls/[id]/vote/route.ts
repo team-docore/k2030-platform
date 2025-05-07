@@ -69,7 +69,10 @@ export async function POST(
     }
 
     if (existingVote) {
-      return NextResponse.json({ error: '이미 투표하셨습니다.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'already_voted', message: '이미 투표하셨습니다.' },
+        { status: 400 }
+      );
     }
 
     // 2. 투표 대상 poll 조회

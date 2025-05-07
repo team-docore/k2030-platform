@@ -62,12 +62,25 @@ export function ThinkingSection({ loading }: ThinkingSectionProps) {
         },
         body: JSON.stringify({ optionId }),
       });
-      if (!response.ok) throw new Error('투표 실패');
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (errorData.error === 'already_voted') {
+          alert('이미 투표하셨습니다.');
+          return;
+        }
+        throw new Error('투표 실패');
+      }
+      
       const updatedPoll = await response.json();
       setPolls(polls.map(p => p.id === pollId ? updatedPoll : p));
       setVotedPolls(prev => ({ ...prev, [pollId]: true }));
     } catch (err) {
-      alert(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.');
+      if (err instanceof Error && err.message === '이미 투표하셨습니다.') {
+        alert(err.message);
+      } else {
+        alert('알 수 없는 오류가 발생했습니다.');
+      }
     }
   };
 
