@@ -207,34 +207,27 @@ export function PollCard({ polls, onVote, onUpdate, onDelete, votedPolls, hasVot
       {activePolls.length > 0 && (
         <>
           <TightSubTitle>진행중인 투표</TightSubTitle>
-          {activePolls.map((poll) => (
-            <WideCard key={`active-${poll.id}`} $marginBottom="1rem">
-              <div style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: 8 }}>
-                {poll.categories?.name && <CategoryGap>[{poll.categories.name}]</CategoryGap>}
-                {poll.question}
-              </div>
-              <div style={{ marginBottom: 8 }}>
-                {poll.options.map((option, index) => {
-                  const isVoted = votedPolls[poll.id]?.optionId === option.id;
-                  const optionKey = `poll-${poll.id}-option-${option.id || index}`;
-                  return (
-                    <OptionButton
-                      key={optionKey}
-                      onClick={() => onVote(poll.id, option.id)}
-                      disabled={!!votedPolls[poll.id]}
-                      $isVoted={isVoted}
-                    >
-                      {isVoted ? '✔️ ' : ''}{option.text} ({option.votes}표)
-                    </OptionButton>
-                  );
-                })}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Category>{poll.categories?.name || '기타'}</Category>
-                <DateText>{poll.remainTime}</DateText>
-              </div>
-            </WideCard>
-          ))}
+          <WideCard $marginBottom="1rem">
+            <TableWrapper>
+              <StyledTable
+                headers={["카테고리", "질문", "총 투표인원"]}
+                data={activePolls}
+                onRowClick={handleRowClick}
+                renderRow={(poll: Poll) => (
+                  <React.Fragment key={`active-${poll.id}`}>
+                    <TableCell>
+                      {poll.categories?.name || '기타'}
+                    </TableCell>
+                    <TableCell>
+                      {poll.question}
+                    </TableCell>
+                    <VoteCountCell>{poll.totalVotes}명</VoteCountCell>
+                  </React.Fragment>
+                )}
+                emptyMessage="진행중인 투표가 없습니다."
+              />
+            </TableWrapper>
+          </WideCard>
         </>
       )}
       {endedPolls.length > 0 && (
@@ -243,13 +236,15 @@ export function PollCard({ polls, onVote, onUpdate, onDelete, votedPolls, hasVot
           <WideCard $marginBottom="1rem">
             <TableWrapper>
               <StyledTable
-                headers={[]}
+                headers={["카테고리", "질문", "총 투표인원"]}
                 data={endedPolls}
                 onRowClick={handleRowClick}
                 renderRow={(poll: Poll) => (
                   <React.Fragment key={`ended-${poll.id}`}>
                     <TableCell>
-                      {poll.categories?.name && <CategoryGap>[{poll.categories.name}]</CategoryGap>}
+                      {poll.categories?.name || '기타'}
+                    </TableCell>
+                    <TableCell>
                       {poll.question}
                     </TableCell>
                     <VoteCountCell>{poll.totalVotes}명</VoteCountCell>

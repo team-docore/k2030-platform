@@ -123,11 +123,12 @@ export function PollDetailCard({ poll, onVote, onUpdate, onDelete, hasVoted = fa
       </StyledTopBar>
       <StyledQuestion>{poll.question}</StyledQuestion>
       <StyledOptionGroup>
-        {poll.options.map((option: any) => {
+        {poll.options.map((option: any, index: number) => {
           const percent = poll.totalVotes > 0 ? Math.round((option.votes / poll.totalVotes) * 100) : 0;
+          const optionKey = option.id ? option.id : `detail-option-${poll.id}-${index}`;
           return (
             <OptionButton
-              key={option.id}
+              key={optionKey}
               onClick={() => handleVote(option.id)}
               $selected={selected === option.id}
               $disabled={hasVoted || loading}
