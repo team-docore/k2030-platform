@@ -5,7 +5,7 @@ import { Session, Account, User } from "next-auth";
 import { supabase } from './supabaseClient';
 
 export const authOptions: NextAuthOptions = {
-  debug: true,
+  debug: false,
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -84,28 +84,16 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async session({ session, token }: { session: Session; token: JWT }) {
-      console.log('🔍 [auth.ts] session callback 시작:', { session, token });
-      
-      if (session?.user?.email) {
-        try {
-          const { data, error } = await supabase
-            .from('users')
-            .select('is_admin, status')
-            .eq('email', session.user.email)
-            .single();
-          
-          console.log('🔍 [auth.ts] supabase 조회 결과:', { data, error });
-          
-          if (data) {
-            session.user = {
-              ...session.user,
-              isAdmin: data.is_admin,
-              status: data.status
-            };
-            console.log('🔍 [auth.ts] 세션 업데이트 후:', session);
-          }
-        } catch (err) {
-          console.error('🔍 [auth.ts] 세션 업데이트 중 오류:', err);
+      if (session?.user) {
+        const { data, error } = await supabase
+          .from('users')
+          .select('is_admin, status')
+          .eq('email', session.user.email)
+          .single();
+
+        if (!error && data) {
+          session.user.isAdmin = data.is_admin;
+          session.user.status = data.status;
         }
       }
       return session;
@@ -118,11 +106,11 @@ export const authOptions: NextAuthOptions = {
     },
   },
   events: {
-    async signIn(message: { user: any; account: any; profile?: any; isNewUser?: boolean }) { console.log('🔍 [NextAuth] signIn event:', message); },
-    async signOut(message: { session: any; token: any }) { console.log('🔍 [NextAuth] signOut event:', message); },
-    async createUser(message: { user: any }) { console.log('🔍 [NextAuth] createUser event:', message); },
-    async updateUser(message: { user: any }) { console.log('🔍 [NextAuth] updateUser event:', message); },
-    async linkAccount(message: { user: any; account: any; profile?: any }) { console.log('🔍 [NextAuth] linkAccount event:', message); },
-    async session(message: { session: any; token: any }) { console.log('🔍 [NextAuth] session event:', message); },
+    async signIn({ user }) {
+      // 로그 제거
+    },
+    async session({ session }) {
+      // 로그 제거
+    }
   },
 }; 

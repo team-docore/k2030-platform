@@ -124,7 +124,6 @@ export default function HomeClient() {
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [showAdminModal, setShowAdminModal] = useState(false);
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -143,13 +142,7 @@ export default function HomeClient() {
 
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
-      console.log('🔍 [HomeClient] 세션 정보:', session);
-      if (session.user.isAdmin === true) {
-        console.log('🔍 [HomeClient] 어드민 권한 확인됨');
-        setShowAdminModal(true);
-      } else {
-        console.log('🔍 [HomeClient] 어드민 권한 없음');
-      }
+      // 세션 로그 제거
     }
   }, [status, session]);
 
@@ -249,26 +242,22 @@ export default function HomeClient() {
   }, [fetchPolls]);
 
   const handleAdmin = () => {
-    setShowAdminModal(false);
-    router.push('/admin/polls');
+    console.log('🔍 [어드민] 버튼 클릭됨');
+    console.log('🔍 [어드민] 현재 세션:', session);
+    console.log('🔍 [어드민] 라우터 상태:', router);
+    try {
+      router.push('/admin/polls');
+    } catch (error) {
+      console.error('🔍 [어드민] 라우팅 에러:', error);
+    }
   };
 
   const handleUser = () => {
-    setShowAdminModal(false);
     router.push('/');
   };
 
-  if (showAdminModal) {
-    return (
-      <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-        <div style={{ background: '#fff', padding: 32, borderRadius: 12, boxShadow: '0 2px 16px rgba(0,0,0,0.15)' }}>
-          <p style={{ fontWeight: 700, fontSize: 18, marginBottom: 24 }}>관리자 계정입니다.<br />어드민 페이지로 접속하시겠습니까?</p>
-          <button onClick={handleAdmin} style={{ marginRight: 16, padding: '8px 20px', fontWeight: 600 }}>예, 어드민으로 이동</button>
-          <button onClick={handleUser} style={{ padding: '8px 20px', fontWeight: 600 }}>아니오, 일반 사용자로 이동</button>
-        </div>
-      </div>
-    );
-  }
+  // 어드민 여부 확인
+  const isAdmin = session?.user?.isAdmin === true;
 
   if (loading) {
     return <LoadingSplash />;
@@ -277,6 +266,35 @@ export default function HomeClient() {
   return (
     <MainContainer>
       <ContentWrapper>
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('🔍 [어드민] 버튼 직접 클릭');
+              handleAdmin();
+            }}
+            style={{
+              position: 'fixed',
+              top: 24,
+              right: 32,
+              zIndex: 9999,
+              background: '#222',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 8,
+              padding: '10px 22px',
+              fontWeight: 700,
+              fontSize: 16,
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+              pointerEvents: 'auto'
+            }}
+          >
+            어드민 페이지
+          </button>
+        )}
         <ThinkingSection loading={loading} />
       </ContentWrapper>
     </MainContainer>

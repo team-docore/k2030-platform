@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Poll } from '@/types/poll';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { PollCard } from './PollCard';
@@ -38,11 +38,7 @@ export function ThinkingSection({ loading }: ThinkingSectionProps) {
     router.push(path);
   };
 
-  useEffect(() => {
-    fetchPolls();
-  }, []);
-
-  const fetchPolls = async () => {
+  const fetchPolls = useCallback(async () => {
     try {
       const response = await fetch('/api/polls');
       if (!response.ok) throw new Error('투표 목록을 불러오는데 실패했습니다.');
@@ -51,9 +47,13 @@ export function ThinkingSection({ loading }: ThinkingSectionProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.');
     }
-  };
+  }, []);
 
-  const handleVote = async (pollId: string, optionId: string) => {
+  useEffect(() => {
+    fetchPolls();
+  }, [fetchPolls]);
+
+  const handleVote = useCallback(async (pollId: string, optionId: string) => {
     try {
       const response = await fetch(`/api/polls/${pollId}/vote`, {
         method: 'POST',
@@ -73,7 +73,7 @@ export function ThinkingSection({ loading }: ThinkingSectionProps) {
       }
       
       const updatedPoll = await response.json();
-      setPolls(polls.map(p => p.id === pollId ? updatedPoll : p));
+      setPolls(prevPolls => prevPolls.map(p => p.id === pollId ? updatedPoll : p));
       setVotedPolls(prev => ({ ...prev, [pollId]: { optionId } }));
     } catch (err) {
       if (err instanceof Error && err.message === '이미 투표하셨습니다.') {
@@ -82,9 +82,9 @@ export function ThinkingSection({ loading }: ThinkingSectionProps) {
         alert('알 수 없는 오류가 발생했습니다.');
       }
     }
-  };
+  }, []);
 
-  const handleUpdatePoll = async (updatedPoll: Poll) => {
+  const handleUpdatePoll = useCallback(async (updatedPoll: Poll) => {
     try {
       const response = await fetch(`/api/polls/${updatedPoll.id}`, {
         method: 'PATCH',
@@ -95,13 +95,13 @@ export function ThinkingSection({ loading }: ThinkingSectionProps) {
       });
       if (!response.ok) throw new Error('수정 실패');
       const data = await response.json();
-      setPolls(polls.map(poll => poll.id === data.id ? data : poll));
+      setPolls(prevPolls => prevPolls.map(poll => poll.id === data.id ? data : poll));
     } catch (err) {
       alert(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.');
     }
-  };
+  }, []);
 
-  const handleDeletePoll = async (pollId: string) => {
+  const handleDeletePoll = useCallback(async (pollId: string) => {
     if (!window.confirm('정말 삭제하시겠습니까?')) return;
     try {
       const response = await fetch(`/api/polls/${pollId}`, {
@@ -110,7 +110,6 @@ export function ThinkingSection({ loading }: ThinkingSectionProps) {
       });
       if (!response.ok) throw new Error('삭제 실패');
       
-      // 삭제 후 상태 업데이트
       setPolls(prevPolls => prevPolls.filter(poll => poll.id !== pollId));
       setVotedPolls(prev => {
         const newVotedPolls = { ...prev };
@@ -120,13 +119,13 @@ export function ThinkingSection({ loading }: ThinkingSectionProps) {
     } catch (err) {
       alert(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.');
     }
-  };
+  }, []);
 
-  const handleMore = () => {
-    setVisibleCount((prev) => prev + 3);
-  };
+  const handleMore = useCallback(() => {
+    setVisibleCount(prev => prev + 3);
+  }, []);
 
-  const handleCreatePoll = async (question: string, categoryId: number) => {
+  const handleCreatePoll = useCallback(async (question: string, categoryId: number) => {
     if (!session) {
       alert('로그인이 필요합니다.');
       return;
@@ -138,17 +137,17 @@ export function ThinkingSection({ loading }: ThinkingSectionProps) {
     });
     if (!response.ok) throw new Error('등록 실패');
     const newPoll = await response.json();
-    setPolls([newPoll, ...polls]);
+    setPolls(prevPolls => [newPoll, ...prevPolls]);
     setShowCreate(false);
-  };
+  }, [session]);
 
-  const handleCreateClick = () => {
+  const handleCreateClick = useCallback(() => {
     if (!session) {
       handleNavigation('/auth/signin');
       return;
     }
     setShowCreate(true);
-  };
+  }, [session, handleNavigation]);
 
   if (isNavigating) {
     return <LoadingSplash />;

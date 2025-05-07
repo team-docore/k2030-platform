@@ -1,5 +1,5 @@
 // DOCORE: 투표 목록을 카드 형식으로 보여주는 컴포넌트
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Poll } from '@/types/poll';
 import { Table } from '@/components/design/Table';
 import styled from 'styled-components';
@@ -89,118 +89,112 @@ export function PollCard({ polls, onVote, onUpdate, onDelete, votedPolls, hasVot
   const [hideDetail, setHideDetail] = useState(false);
   const [ignorePollIds, setIgnorePollIds] = useState<string[]>([]);
 
-  useEffect(() => {
-    // 사용자의 관심없음 목록 가져오기
-    const fetchIgnoredPolls = async () => {
-      try {
-        const response = await axios.get('/api/polls/ignore');
-        if (response.data.ignoredPollIds) {
-          setIgnorePollIds(response.data.ignoredPollIds);
-          console.log('관심없음 목록 로드:', response.data.ignoredPollIds);
-        }
-      } catch (error) {
-        console.error('관심없음 목록 조회 실패:', error);
-      }
-    };
-    fetchIgnoredPolls();
-  }, []);
-
   // 관심없음 처리된 투표 제외
   const filteredPolls = polls.filter(p => !ignorePollIds.includes(p.id));
 
+  // 관심없음 목록 가져오기
   useEffect(() => {
-    if (filteredPolls.length > 0 && !selectedPoll) {
-      const latestPoll = filteredPolls.reduce((latest, current) => {
-        const latestDate = new Date(latest.createdAt).getTime();
-        const currentDate = new Date(current.createdAt).getTime();
-        return currentDate > latestDate ? current : latest;
-      });
-      setSelectedPoll(latestPoll);
-    }
-  }, [filteredPolls, selectedPoll]);
+    let isMounted = true;
 
+    const fetchIgnoredPolls = async () => {
+      try {
+        const response = await axios.get('/api/polls/ignore');
+        if (isMounted && response.data.ignoredPollIds) {
+          setIgnorePollIds(response.data.ignoredPollIds);
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('관심없음 목록 조회 실패:', error);
+        }
+      }
+    };
+
+    fetchIgnoredPolls();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []); // 컴포넌트 마운트 시 한 번만 실행
+
+  // 투표 분류 업데이트
   useEffect(() => {
     const now = new Date().getTime();
-    const active = filteredPolls.filter((poll: Poll) => {
+    
+    // 활성/종료 투표 분류
+    const active = filteredPolls.filter(poll => {
       if (!poll.endsAt) return true;
       const endDate = new Date(poll.endsAt).getTime();
       return endDate > now;
     });
-    const ended = filteredPolls.filter((poll: Poll) => {
+    
+    const ended = filteredPolls.filter(poll => {
       if (!poll.endsAt) return false;
       const endDate = new Date(poll.endsAt).getTime();
       return endDate <= now;
     });
-    setActivePolls(active);
-    setEndedPolls(ended);
-  }, [filteredPolls]);
 
-  const handleRowClick = (poll: Poll) => {
+    // 이전 상태와 비교하여 변경이 있을 때만 상태 업데이트
+    const activeChanged = JSON.stringify(active) !== JSON.stringify(activePolls);
+    const endedChanged = JSON.stringify(ended) !== JSON.stringify(endedPolls);
+
+    if (activeChanged) {
+      setActivePolls(active);
+    }
+    if (endedChanged) {
+      setEndedPolls(ended);
+    }
+  }, [filteredPolls]); // filteredPolls가 변경될 때만 실행
+
+  // 선택된 투표 업데이트
+  useEffect(() => {
+    if (!selectedPoll && activePolls.length > 0) {
+      // 첫 번째 투표를 선택
+      setSelectedPoll(activePolls[0]);
+    }
+  }, [activePolls, selectedPoll]); // activePolls나 selectedPoll이 변경될 때만 실행
+
+  const handleRowClick = useCallback((poll: Poll) => {
     setSelectedPoll(poll);
     setHideDetail(false);
-  };
+  }, []); // 의존성 없음
 
   // 관심없음 처리 시 DB에 기록 후 최신 투표로 전환
-  const handleHideDetail = async () => {
-    if (selectedPoll) {
-      try {
-        console.log('관심없음 처리 시작:', selectedPoll.id);
-        const response = await axios.post(`/api/polls/${selectedPoll.id}/ignore`);
-        console.log('관심없음 처리 결과:', response.data);
+  const handleHideDetail = useCallback(async () => {
+    if (!selectedPoll) return;
+
+    try {
+      const response = await axios.post(`/api/polls/${selectedPoll.id}/ignore`);
+      
+      if (response.data.ok) {
+        // 1. ignorePollIds 상태 업데이트
+        setIgnorePollIds(prev => [...prev, selectedPoll.id]);
         
-        if (response.data.ok) {
-          // 1. 현재 선택된 투표를 제외한 나머지 투표들
-          const remainingPolls = filteredPolls.filter(p => p.id !== selectedPoll.id);
-          
-          // 2. ignorePollIds 상태 업데이트
-          setIgnorePollIds(prev => [...prev, selectedPoll.id]);
-          
-          // 3. 상세 카드 닫기
-          setHideDetail(true);
-          setSelectedPoll(null);
+        // 2. 상세 카드 닫기
+        setHideDetail(true);
+        setSelectedPoll(null);
 
-          // 4. activePolls, endedPolls 상태 업데이트
-          const now = new Date().getTime();
-          const active = remainingPolls.filter((poll: Poll) => {
-            if (!poll.endsAt) return true;
-            const endDate = new Date(poll.endsAt).getTime();
-            return endDate > now;
-          });
-          const ended = remainingPolls.filter((poll: Poll) => {
-            if (!poll.endsAt) return false;
-            const endDate = new Date(poll.endsAt).getTime();
-            return endDate <= now;
-          });
-          setActivePolls(active);
-          setEndedPolls(ended);
-
-          // 5. 남은 투표가 있으면 첫 번째 투표 선택
-          setTimeout(() => {
-            if (active.length > 0) {
-              setSelectedPoll(active[0]);
-              setHideDetail(false);
-            } else if (ended.length > 0) {
-              setSelectedPoll(ended[0]);
-              setHideDetail(false);
-            }
-          }, 100);
-
-          console.log('관심없음 상태 업데이트 완료');
-        } else {
-          console.error('관심없음 처리 실패:', response.data.error);
-          alert('관심없음 처리에 실패했습니다.');
+        // 3. 남은 투표가 있으면 첫 번째 투표 선택
+        if (activePolls.length > 0) {
+          setSelectedPoll(activePolls[0]);
+          setHideDetail(false);
+        } else if (endedPolls.length > 0) {
+          setSelectedPoll(endedPolls[0]);
+          setHideDetail(false);
         }
-      } catch (error) {
-        console.error('관심없음 API 호출 에러:', error);
-        alert('관심없음 처리 중 오류가 발생했습니다.');
+      } else {
+        alert('관심없음 처리에 실패했습니다.');
       }
+    } catch (error) {
+      console.error('관심없음 API 호출 에러:', error);
+      alert('관심없음 처리 중 오류가 발생했습니다.');
     }
-  };
+  }, [selectedPoll, activePolls, endedPolls]); // 관련 상태들이 변경될 때만 실행
 
   return (
     <Container>
       {selectedPoll && !hideDetail && (
         <PollDetailCard
+          key={`detail-${selectedPoll.id}`}
           poll={selectedPoll}
           onVote={(optionId: string) => onVote(selectedPoll.id, optionId)}
           onUpdate={onUpdate}
@@ -214,17 +208,18 @@ export function PollCard({ polls, onVote, onUpdate, onDelete, votedPolls, hasVot
         <>
           <TightSubTitle>진행중인 투표</TightSubTitle>
           {activePolls.map((poll) => (
-            <WideCard key={poll.id} $marginBottom="1rem">
+            <WideCard key={`active-${poll.id}`} $marginBottom="1rem">
               <div style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: 8 }}>
                 {poll.categories?.name && <CategoryGap>[{poll.categories.name}]</CategoryGap>}
                 {poll.question}
               </div>
               <div style={{ marginBottom: 8 }}>
-                {poll.options.map((option) => {
+                {poll.options.map((option, index) => {
                   const isVoted = votedPolls[poll.id]?.optionId === option.id;
+                  const optionKey = `poll-${poll.id}-option-${option.id || index}`;
                   return (
                     <OptionButton
-                      key={option.id}
+                      key={optionKey}
                       onClick={() => onVote(poll.id, option.id)}
                       disabled={!!votedPolls[poll.id]}
                       $isVoted={isVoted}
@@ -252,13 +247,13 @@ export function PollCard({ polls, onVote, onUpdate, onDelete, votedPolls, hasVot
                 data={endedPolls}
                 onRowClick={handleRowClick}
                 renderRow={(poll: Poll) => (
-                  <>
+                  <React.Fragment key={`ended-${poll.id}`}>
                     <TableCell>
                       {poll.categories?.name && <CategoryGap>[{poll.categories.name}]</CategoryGap>}
                       {poll.question}
                     </TableCell>
                     <VoteCountCell>{poll.totalVotes}명</VoteCountCell>
-                  </>
+                  </React.Fragment>
                 )}
                 emptyMessage="마감된 투표가 없습니다."
               />
