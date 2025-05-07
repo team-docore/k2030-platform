@@ -30,7 +30,7 @@ export function ThinkingSection({ loading }: ThinkingSectionProps) {
   const [error, setError] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(3);
   const [showCreate, setShowCreate] = useState(false);
-  const [votedPolls, setVotedPolls] = useState<{ [pollId: string]: boolean }>({});
+  const [votedPolls, setVotedPolls] = useState<{ [pollId: string]: { optionId: string } }>({});
   const [expandedPollId, setExpandedPollId] = useState<string | null>(null);
 
   const handleNavigation = (path: string) => {
@@ -74,7 +74,7 @@ export function ThinkingSection({ loading }: ThinkingSectionProps) {
       
       const updatedPoll = await response.json();
       setPolls(polls.map(p => p.id === pollId ? updatedPoll : p));
-      setVotedPolls(prev => ({ ...prev, [pollId]: true }));
+      setVotedPolls(prev => ({ ...prev, [pollId]: { optionId } }));
     } catch (err) {
       if (err instanceof Error && err.message === '이미 투표하셨습니다.') {
         alert(err.message);
@@ -185,7 +185,7 @@ export function ThinkingSection({ loading }: ThinkingSectionProps) {
           onVote={handleVote}
           onUpdate={handleUpdatePoll}
           onDelete={handleDeletePoll}
-          hasVoted={votedPolls}
+          votedPolls={votedPolls}
         />
       </ContentWrapper>
     </MainContainer>

@@ -4,10 +4,11 @@ import { Poll } from '@/types/poll';
 import { Table } from '@/components/design/Table';
 import styled from 'styled-components';
 import { PollDetailCard } from './PollDetailCard';
-import { SubTitle, Category } from '@/components/design/Typography';
+import { SubTitle, Category, DateText } from '@/components/design/Typography';
 import { ContentWrapper } from '@/components/design/Layout';
 import Card from '@/components/design/Card';
 import axios from 'axios';
+import { PrimaryButton } from '@/components/design/Button';
 
 const Container = styled(ContentWrapper)`
   display: flex;
@@ -47,15 +48,41 @@ const CategoryGap = styled(Category)`
   margin-right: 0.5rem;
 `;
 
+const OptionButton = styled(PrimaryButton)<{ $isVoted?: boolean }>`
+  width: 100%;
+  margin-bottom: 8px;
+  background: ${({ $isVoted }) => ($isVoted ? '#4d8888' : '#f8fafc')};
+  color: ${({ $isVoted }) => ($isVoted ? '#fff' : '#222')};
+  font-weight: ${({ $isVoted }) => ($isVoted ? '700' : '500')};
+  border: 1px solid ${({ $isVoted }) => ($isVoted ? '#4d8888' : '#e5e7eb')};
+  cursor: ${({ $isVoted }) => ($isVoted ? 'default' : 'pointer')};
+  opacity: ${({ $isVoted }) => ($isVoted ? '1' : '0.8')};
+  transition: all 0.2s;
+
+  &:hover {
+    background: ${({ $isVoted }) => ($isVoted ? '#4d8888' : '#f0fdfa')};
+    color: ${({ $isVoted }) => ($isVoted ? '#fff' : '#4d8888')};
+    border-color: ${({ $isVoted }) => ($isVoted ? '#4d8888' : '#4d8888')};
+  }
+
+  &:disabled {
+    background: #f8fafc;
+    color: #9ca3af;
+    border-color: #e5e7eb;
+    cursor: not-allowed;
+  }
+`;
+
 interface PollCardProps {
   polls: Poll[];
-  onVote?: (pollId: string, optionId: string) => void;
-  onUpdate?: (poll: Poll) => void;
-  onDelete?: (pollId: string) => void;
+  onVote: (pollId: string, optionId: string) => Promise<void>;
+  onUpdate: (updatedPoll: Poll) => Promise<void>;
+  onDelete: (pollId: string) => Promise<void>;
+  votedPolls: { [pollId: string]: { optionId: string } };
   hasVoted?: { [pollId: string]: boolean };
 }
 
-export function PollCard({ polls, onVote, onUpdate, onDelete, hasVoted = {} }: PollCardProps) {
+export function PollCard({ polls, onVote, onUpdate, onDelete, votedPolls, hasVoted = {} }: PollCardProps) {
   const [selectedPoll, setSelectedPoll] = useState<Poll | null>(null);
   const [activePolls, setActivePolls] = useState<Poll[]>([]);
   const [endedPolls, setEndedPolls] = useState<Poll[]>([]);
@@ -175,7 +202,7 @@ export function PollCard({ polls, onVote, onUpdate, onDelete, hasVoted = {} }: P
       {selectedPoll && !hideDetail && (
         <PollDetailCard
           poll={selectedPoll}
-          onVote={(optionId: string) => onVote?.(selectedPoll.id, optionId)}
+          onVote={(optionId: string) => onVote(selectedPoll.id, optionId)}
           onUpdate={onUpdate}
           onDelete={onDelete}
           hasVoted={hasVoted[selectedPoll.id]}
@@ -186,25 +213,33 @@ export function PollCard({ polls, onVote, onUpdate, onDelete, hasVoted = {} }: P
       {activePolls.length > 0 && (
         <>
           <TightSubTitle>진행중인 투표</TightSubTitle>
-          <WideCard $marginBottom="1rem">
-            <TableWrapper>
-              <StyledTable
-                headers={[]}
-                data={activePolls}
-                onRowClick={handleRowClick}
-                renderRow={(poll: Poll) => (
-                  <>
-                    <TableCell>
-                      {poll.categories?.name && <CategoryGap>[{poll.categories.name}]</CategoryGap>}
-                      {poll.question}
-                    </TableCell>
-                    <VoteCountCell>{poll.totalVotes}명</VoteCountCell>
-                  </>
-                )}
-                emptyMessage="진행중인 투표가 없습니다."
-              />
-            </TableWrapper>
-          </WideCard>
+          {activePolls.map((poll) => (
+            <WideCard key={poll.id} $marginBottom="1rem">
+              <div style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: 8 }}>
+                {poll.categories?.name && <CategoryGap>[{poll.categories.name}]</CategoryGap>}
+                {poll.question}
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                {poll.options.map((option) => {
+                  const isVoted = votedPolls[poll.id]?.optionId === option.id;
+                  return (
+                    <OptionButton
+                      key={option.id}
+                      onClick={() => onVote(poll.id, option.id)}
+                      disabled={!!votedPolls[poll.id]}
+                      $isVoted={isVoted}
+                    >
+                      {isVoted ? '✔️ ' : ''}{option.text} ({option.votes}표)
+                    </OptionButton>
+                  );
+                })}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Category>{poll.categories?.name || '기타'}</Category>
+                <DateText>{poll.remainTime}</DateText>
+              </div>
+            </WideCard>
+          ))}
         </>
       )}
       {endedPolls.length > 0 && (
