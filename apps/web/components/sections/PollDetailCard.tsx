@@ -11,6 +11,7 @@ import { formatDate } from '@/utils/date';
 import { EditPollModal } from './EditPollModal';
 import { useSession } from 'next-auth/react';
 import styled from 'styled-components';
+import { useRouter } from 'next/navigation';
 
 const StyledCard = styled(Card)`
   position: relative;
@@ -56,6 +57,7 @@ function getRemainTime(endsAt: string) {
 }
 export function PollDetailCard({ poll, onVote, onUpdate, onDelete, hasVoted = false, onClose, onHide }: any) {
   const { data: session } = useSession();
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
@@ -79,6 +81,11 @@ export function PollDetailCard({ poll, onVote, onUpdate, onDelete, hasVoted = fa
     try {
       await onVote?.(optionId);
       setSelected(optionId);
+      if (onUpdate) {
+        const res = await fetch(`/api/polls/${poll.id}`);
+        const updatedPoll = await res.json();
+        onUpdate(updatedPoll);
+      }
     } catch (err) {
       setError('투표에 실패했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
