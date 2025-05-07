@@ -5,6 +5,7 @@ import Card from '@/components/design/Card';
 import { Title, SubTitle } from '@/components/design/Typography';
 import { PrimaryButton } from '@/components/design/Button';
 import { useSession } from 'next-auth/react';
+import LoadingSplash from '@/components/common/LoadingSplash';
 
 interface User {
   id: string;
@@ -21,24 +22,53 @@ export default function AdminUserManagementPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   const fetchUsers = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/admin/users');
+      const res = await fetch('/api/admin/users', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || '회원 목록을 불러오는데 실패했습니다.');
+      }
+      
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      console.log('🔍 [회원관리] 회원 목록:', data);
+      if (!Array.isArray(data)) {
+        throw new Error('잘못된 데이터 형식입니다.');
+      }
       setUsers(data);
     } catch (err: any) {
+      console.error('🔍 [회원관리] 오류:', err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user?.isAdmin) {
+      fetchUsers();
+    }
+  }, [status, session]);
+
+  if (status === 'loading' || loading) {
+    return <LoadingSplash />;
+  }
+
+  if (!session?.user?.isAdmin) {
+    return null;
+  }
 
   const handleStatusChange = async (id: string, status: string) => {
     setUpdating(id);

@@ -4,6 +4,7 @@ import NextAuth from "next-auth";
 declare module "next-auth" {
   interface User {
     isAdmin?: boolean;
+    status?: string;
   }
   interface Session {
     user: {
@@ -11,6 +12,7 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       isAdmin?: boolean;
+      status?: string;
     };
   }
 } 

@@ -87,20 +87,25 @@ export const authOptions: NextAuthOptions = {
       console.log('🔍 [auth.ts] session callback 시작:', { session, token });
       
       if (session?.user?.email) {
-        const { data, error } = await supabase
-          .from('users')
-          .select('is_admin')
-          .eq('email', session.user.email)
-          .single();
-        
-        console.log('🔍 [auth.ts] supabase 조회 결과:', { data, error });
-        
-        if (data) {
-          session.user = {
-            ...session.user,
-            isAdmin: data.is_admin
-          };
-          console.log('🔍 [auth.ts] 세션 업데이트 후:', session);
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .select('is_admin, status')
+            .eq('email', session.user.email)
+            .single();
+          
+          console.log('🔍 [auth.ts] supabase 조회 결과:', { data, error });
+          
+          if (data) {
+            session.user = {
+              ...session.user,
+              isAdmin: data.is_admin,
+              status: data.status
+            };
+            console.log('🔍 [auth.ts] 세션 업데이트 후:', session);
+          }
+        } catch (err) {
+          console.error('🔍 [auth.ts] 세션 업데이트 중 오류:', err);
         }
       }
       return session;

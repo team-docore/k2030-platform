@@ -1,9 +1,11 @@
 'use client';
 // DOCORE: 어드민 공통 레이아웃(좌측 사이드바)
-import React from 'react';
+import React, { useEffect } from 'react';
 import styled from 'styled-components';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import LoadingSplash from '@/components/common/LoadingSplash';
 
 const LayoutWrapper = styled.div`
   display: flex;
@@ -62,6 +64,25 @@ const Content = styled.div`
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { data: session, status } = useSession();
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/signin');
+    } else if (status === 'authenticated' && !session?.user?.isAdmin) {
+      router.push('/');
+    }
+  }, [status, session, router]);
+
+  if (status === 'loading') {
+    return <LoadingSplash />;
+  }
+
+  if (!session?.user?.isAdmin) {
+    return null;
+  }
+
   return (
     <LayoutWrapper>
       <Sidebar>

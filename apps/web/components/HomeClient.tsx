@@ -142,8 +142,14 @@ export default function HomeClient() {
   }, []);
 
   useEffect(() => {
-    if (status === 'authenticated' && session?.user && (session.user as any).isAdmin) {
-      setShowAdminModal(true);
+    if (status === 'authenticated' && session?.user) {
+      console.log('🔍 [HomeClient] 세션 정보:', session);
+      if (session.user.isAdmin === true) {
+        console.log('🔍 [HomeClient] 어드민 권한 확인됨');
+        setShowAdminModal(true);
+      } else {
+        console.log('🔍 [HomeClient] 어드민 권한 없음');
+      }
     }
   }, [status, session]);
 
